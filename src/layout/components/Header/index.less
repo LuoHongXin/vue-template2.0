@@ -1,0 +1,140 @@
+.navbar {
+  width: 100%;
+  height: @headerHeight;
+  background: @headerBg;
+  overflow: hidden;
+  position: fixed;
+  top: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 30px 0 16px;
+  color: #fff;
+  z-index: 1000;
+
+  .select-content {
+    padding-left: 18px;
+
+    .ant-select-selection {
+      background: rgba(255, 255, 255, 0.08);
+      border: none;
+      width: 240px;
+      color: #fff;
+
+      .ant-select-arrow {
+        color: #fff;
+      }
+    }
+  }
+
+  .navber-left {
+    display: flex;
+    align-items: center;
+
+    .b {
+      width: 1px;
+      height: 16px;
+      opacity: 0.6;
+      background: #7d7d7d;
+      margin: 0 20px;
+    }
+
+    .select-name {
+      font-size: 12px;
+      font-weight: 400;
+      color: #dadada;
+      cursor: pointer;
+    }
+
+    .logo {
+      height: 32px;
+      padding-right: 16px;
+      .svg-icon {
+        width: 100%;
+        height: 100%;
+      }
+    }
+    .svglogo {
+      width: 60px !important;
+    }
+  }
+  .lang-item {
+    padding-left: 14px;
+  }
+  .webName {
+    font-family: "Montserrat";
+    font-size: 18px;
+    font-weight: 400;
+    color: #e5e5e5;
+  }
+
+  .navber-right {
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 400;
+    .file-log-icon {
+      padding-right: 12px;
+      cursor: pointer;
+      position: relative;
+      .num {
+        position: absolute;
+        right: 0;
+        top: -11px;
+        width: 25px;
+        height: 20px;
+        line-height: 20px;
+        background: #d93934;
+        border: 1px solid #ffffff;
+        border-radius: 10px;
+        font-size: 12px;
+        font-weight: 400;
+        text-align: center;
+        color: #ffffff;
+      }
+      .y-svg-icon {
+        width: 20px;
+        height: 20px;
+      }
+    }
+
+    each(@theme-list, {
+        &.@{value} .header-item {
+          &:hover {
+            @class: ~'hover-bg-color-@{value}';
+            background-color: @@class;
+          }
+        }
+      }
+
+    )
+      .b {
+      width: 1px;
+      height: 16px;
+      opacity: 0.6;
+      background: #7d7d7d;
+      margin: 0 20px;
+    }
+
+    .icon-group {
+      i {
+        font-size: 18px;
+        cursor: pointer;
+
+        &:nth-child(2) {
+          padding: 0 20px;
+        }
+      }
+    }
+
+    .r-name {
+      padding-left: 20px;
+
+      span {
+        &:nth-child(2) {
+          padding: 0 20px;
+        }
+      }
+    }
+  }
+}

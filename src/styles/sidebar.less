@@ -1,0 +1,21 @@
+@import "./variables.less";
+
+#app {
+  .main-container {
+    min-height: 100%;
+    position: relative;
+    background: @globalBg;
+  }
+
+  .sidebar-container {
+    // width: @sideBarWidth;
+    background: @menuBg;
+    height: 100%;
+    position: fixed;
+    font-size: 0px;
+    top: @headerHeight;
+    bottom: 0;
+    left: 0;
+    z-index: 10;
+  }
+}

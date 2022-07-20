@@ -1,75 +1,27 @@
 <template>
-  <div id="app">
-    <a-config-provider :locale="locale">
+  <div id="exampleApp">
+    <a-config-provider :locale="antdConfigLocal">
       <router-view />
     </a-config-provider>
   </div>
 </template>
 
 <script>
-import { mapState, mapMutations } from "vuex";
-import themeUtil from "@/utils/themeUtil";
-import { stompClientConnect } from "@/utils/websocket";
+import { mapGetters, mapMutations } from "vuex";
 export default {
-  name: "App",
-  data() {
-    return {
-      locale: {},
-    };
-  },
-  watch: {
-    "theme.mode": function (val) {
-      let closeMessage = this.$message.loading(
-        `您选择了主题模式 ${val}, 正在切换...`
-      );
-      themeUtil.changeThemeColor(this.theme.color, val).then(closeMessage);
-    },
-    "theme.color": function (val) {
-      let closeMessage = this.$message.loading(
-        `您选择了主题色 ${val}, 正在切换...`
-      );
-      themeUtil.changeThemeColor(val, this.theme.mode).then(closeMessage);
-    },
-    lang(val) {
-      this.setLanguage(val);
-    },
-  },
+  name: "ExampleApp",
   computed: {
-    ...mapState("setting", ["theme", "lang"]),
-  },
-  created() {
-    this.setLanguage(this.lang);
-    stompClientConnect();
+    ...mapGetters(["langLocal", "antdConfigLocal"])
   },
   methods: {
-    setLanguage(lang) {
-      this.$i18n.locale = lang;
-      switch (lang) {
-        case "CN":
-          this.locale = require("ant-design-vue/es/locale-provider/zh_CN").default;
-          break;
-        case "HK":
-          this.locale = require("ant-design-vue/es/locale-provider/zh_TW").default;
-          break;
-        case "US":
-        default:
-          this.locale = require("ant-design-vue/es/locale-provider/en_US").default;
-          break;
-      }
-    },
+    // ...mapMutations("lang", ["SET_LANG_LOCAL"]),
+    ...mapMutations("common", ["SET_VUE_INSTANCE"])
+    // changeLang(lang) {
+    //   this.SET_LANG_LOCAL(lang);
+    // }
   },
+  created() {
+    this.SET_VUE_INSTANCE(this);
+  }
 };
 </script>
-
-<style lang="less">
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-}
-h2 {
-  margin: 0;
-}
-</style>

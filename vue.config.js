@@ -1,65 +1,60 @@
-"use strict";
-const path = require("path");
+// 本地代理配置
+const { name } = require("./package");
+const { userDev } = require("./src/utils/account");
 
-// 实现web项目 全局修改主题颜色
-const themeColorReplacer = require("webpack-theme-color-replacer");
+const webpack = require("webpack");
+
+const { modifyVars } = require("hx-antd-vue/src/antdVars");
+
+const {
+  themeColorReplacer,
+  getThemeColors,
+  resolveCss
+} = require("hx-antd-vue/src/theme");
+
+const path = require("path");
+// posix兼容方式处理路径
+const posixJoin = _path => path.posix.join(assetsPath, _path);
+
 //开启 Gzip 方法
 const CompressionWebpackPlugin = require("compression-webpack-plugin");
 
-const BundleAnalyzerPlugin = require("webpack-bundle-analyzer")
-  .BundleAnalyzerPlugin;
-
-const isPro = process.env.NODE_ENV === "production";
-
-const { getThemeColors, modifyVars } = require("./src/utils/themeUtil");
-
-const { resolveCss } = require("./src/utils/theme-color-replacer-extend");
-
-const { userDev } = require("./src/utils/account");
-
 // 给build生成文件增加版本号 年+月+日+时间戳
-const getDateTimes = (function() {
-  let data = new Date(new Date().toString());
-  let timezoneOffsetInHours = -(data.getTimezoneOffset() / 60); //UTC minus local time
-  let currDate = new Date(
-    data.getFullYear(),
-    data.getMonth(),
-    data.getDate(),
-    data.getHours(),
-    data.getMinutes(),
-    data.getSeconds()
-  );
-  currDate.setHours(data.getHours() + timezoneOffsetInHours);
-  let toISO = currDate.toISOString().match(/\d+/g);
-  let strDate = toISO.map(val => {
-    return val.length === 1 ? "0" + val : val;
-  });
-  return parseInt(strDate.join("")) / 1000;
-})();
-
-const productionGzipExtensions = ["js", "css"];
-
-const assetsPath = "static";
-
-const publicPath = process.env.NODE_ENV === "production" ? "./" : "/";
-
-// posix兼容方式处理路径
-const posixJoin = _path => path.posix.join(assetsPath, _path);
+const { getDateTimes } = require("./src/utils");
+const dataTimes = getDateTimes();
 
 function resolve(dir) {
   return path.join(__dirname, dir);
 }
 
-const name = ""; // page title
+const isPro = process.env.NODE_ENV === "production";
+// 是否接入到主应用
+const isAccessApp = process.env.VUE_IS_ACCESS_APP === "main";
 
-// If your port is set to 80,
-// use administrator privileges to execute the command line.
-// For example, Mac: sudo npm run
-// You can change the port by the following method:
-// port = 9527 npm run dev OR npm run dev --port = 9527
-const port = process.env.port || process.env.npm_config_port || 9527; // dev port
+// 开发环境端口
+const port = process.env.PORT || 7070;
+const productionGzipExtensions = ["js", "css"];
 
-// All configuration item explanations can be find in https://cli.vuejs.org/config/
+const assetsPath = "static";
+
+const posicJoin = _path => path.posix.join(assetsPath, _path);
+
+const whComponentPath = "./node_modules/hx-antd-vue/src/styles/index.less";
+
+// 第三方公共依赖
+const dllModules = ["vue", "wc"];
+const dllPlugin =
+  isPro && isAccessApp
+    ? dllModules.map(item => {
+        return new webpack.DllReferencePlugin({
+          context: __dirname, // 当前目录下的依赖
+          // 注意路径别写错
+          manifest: require(resolve(
+            `./common-resources/dll/${item}-manifest.json`
+          ))
+        });
+      })
+    : [];
 module.exports = {
   // tab 标签logo
   pwa: {
@@ -71,24 +66,13 @@ module.exports = {
       msTileImage: "favicon.ico"
     }
   },
-  /**
-   * You will need to set publicPath if you plan to deploy your site under a sub path,
-   * for example GitHub Pages. If you plan to deploy your site to https://foo.github.io/bar/,
-   * then publicPath should be set to "/bar/".
-   * In most cases please use '/' !!!
-   * Detail: https://cli.vuejs.org/config/#publicpath
-   */
-  publicPath: process.env.NODE_ENV === "production" ? "./" : "/",
-  // 将构建好的文件输出到哪里
-  outputDir: "dist",
-  //指定生成的index.html的输出路径，相对于outputDir。也可以是一个绝对路径。
+  publicPath: process.env.NODE_ENV === "production" ? `/${name}/` : "/",
+  outputDir: resolve(`./dist/${name}`),
   indexPath: "index.html",
-  // //放置生成的静态资源 (js、css、img、fonts) 的 (相对于 outputDir 的) 目录。
   assetsDir: assetsPath,
-  // 是否在保存的时候检查
-  lintOnSave: process.env.NODE_ENV === "development",
-  // 生产环境是否生成 SourceMap
   productionSourceMap: false,
+  lintOnSave: process.env.NODE_ENV === "development",
+
   devServer: {
     port: port,
     open: false, //设置浏览器是否自动打开
@@ -96,10 +80,11 @@ module.exports = {
       warnings: false,
       errors: true
     },
+    headers: {
+      "Access-Control-Allow-Origin": "*"
+    },
     proxy: {
       "/api": {
-        //此处要与 /services/api.js 中的 API_PROXY_PREFIX 值保持一致
-        // target: "http://192.168.205.213:8080/",
         target: userDev.api,
         changeOrigin: true, //是否跨域
         pathRewrite: {
@@ -110,14 +95,12 @@ module.exports = {
       "/websocket": {
         target: userDev.socket, // 为目标变量
         changeOrigin: true, //是否跨域
-        ws: false, // ws: false 解决sockjs 一直在频繁发送这个请求
+        ws: true, // ws: false 解决sockjs 一直在频繁发送这个请求
         pathRewrite: {
           "^/websocket": "/websocket"
         }
       }
-    },
-    // 这里有before和after两种方式，但是有后端接口的话，改用after更好
-    after: require("./mock/mock-server.js")
+    }
   },
   pluginOptions: {
     //引入全局less变量的方式
@@ -125,31 +108,22 @@ module.exports = {
       preProcessor: "less",
       //这个是加上自己的路径，
       //注意：试过不能使用别名路径
-      patterns: [
-        path.resolve(__dirname, "./src/theme/theme.less"),
-        path.resolve(__dirname, "./src/styles/variables.less")
-      ]
+      patterns: [resolve(whComponentPath)]
     }
   },
-
   css: {
-    // 将组件内的 CSS 提取到一个单独的 CSS 文件 (只用在生产环境中)
-    // 也可以是一个传递给 `extract-text-webpack-plugin` 的选项对象
     extract: {
-      filename: posixJoin("css/[name]." + getDateTimes + ".css"),
-      chunkFilename: posixJoin("css/[name]." + getDateTimes + ".css")
+      filename: posicJoin("css/[name]." + dataTimes + ".css"),
+      chunkFilename: posicJoin("css/[name]." + dataTimes + ".css")
     },
     // 是否开启 CSS source map？
     sourceMap: false,
     // 为所有的 CSS 及其预处理文件开启 CSS Modules。
     // 这个选项不会影响 `*.vue` 文件。
     requireModuleExtension: true,
-    // 解决ant-design-vue 按需引入组件 less 版本冲突问题
     loaderOptions: {
       less: {
         lessOptions: {
-          // important extra layer for less-loader^6.0.0
-          // 使用 modifyVars 的方式来进行覆盖antd变量
           modifyVars: modifyVars(),
           javascriptEnabled: true
         }
@@ -166,18 +140,22 @@ module.exports = {
       ".less",
       ".scss"
     ];
-    // 解决ie11兼容ES6
-    config.entry.app = ["babel-polyfill", "whatwg-fetch", "./src/main.js"];
+    // 若是接入到主应用，则去掉 解决ie11兼容ES6
+    // config.entry.app = ["babel-polyfill", "whatwg-fetch", "./src/main.js"];
+
+    // 忽略打包好的 dll 模块的编译
+    dllPlugin.map(item => {
+      config.plugins.push(item);
+    });
+    // 主题色替换
     config.plugins.push(
-      // 生成仅包含颜色的替换样式（主题色等）
       new themeColorReplacer({
-        fileName: posixJoin("css/theme-colors." + getDateTimes + ".css"),
+        filename: posicJoin("css/theme-colors.[contenthash:8].css"),
         matchColors: getThemeColors(),
         injectCss: true,
         resolveCss
       })
     );
-
     if (isPro) {
       // 开启gzip
       config.plugins.push(
@@ -189,38 +167,28 @@ module.exports = {
           minRatio: 0.8
         })
       );
-      // return {
-      //   plugins: [
-      //     // 使用包分析工具
-      //     new BundleAnalyzerPlugin()
-      //   ]
-      // }
     }
+    config.output.library = `${name}-[name]`;
+    config.output.libraryTarget = "umd";
+    config.output.jsonpFunction = `webpackJsonp_${name}`;
   },
   chainWebpack(config) {
     // 别名配置
     config.resolve.alias
-      .set("@", path.resolve(__dirname, "./src"))
-      .set("@views", path.resolve(__dirname, "./src/views"))
-      .set("@images", path.resolve(__dirname, "src/assets/images"));
+      .set("@", resolve("./src"))
+      .set("@utils", resolve("./src/utils"))
+      .set("@assets", resolve("./src/assets"))
+      .set("@cs", resolve("./common-resources"))
+      .set("@views", resolve("./src/views"));
 
     // 它可以提高第一屏的速度，建议开启预加载
     config.plugin("preload").tap(() => [
       {
         rel: "preload",
-        // to ignore runtime.js
-        // https://github.com/vuejs/vue-cli/blob/dev/packages/@vue/cli-service/lib/config/app.js#L171
         fileBlacklist: [/\.map$/, /hot-update\.js$/, /runtime\..*\.js$/],
         include: "initial"
       }
     ]);
-
-    // 删除预加载
-    config.plugins.delete("preload").delete("prefetch");
-
-    // 当有很多页面时，会产生很多无意义的请求
-    config.plugins.delete("prefetch");
-
     // 生产环境下关闭css压缩的 colormin 项，因为此项优化与主题色替换功能冲突
     if (isPro) {
       config.plugin("optimize-css").tap(args => {
@@ -228,16 +196,15 @@ module.exports = {
         return args;
       });
     }
-
     // set svg-sprite-loader
     config.module
       .rule("svg")
-      .exclude.add(resolve("src/icons"))
+      .exclude.add(path.join(__dirname, "src/icons"))
       .end();
     config.module
       .rule("icons")
       .test(/\.svg$/)
-      .include.add(resolve("src/icons"))
+      .include.add(path.join(__dirname, "src/icons"))
       .end()
       .use("svg-sprite-loader")
       .loader("svg-sprite-loader")
@@ -246,6 +213,7 @@ module.exports = {
       })
       .end();
 
+    // runtime 代码就会内联在 index.html 中
     config.when(process.env.NODE_ENV !== "development", config => {
       config
         .plugin("ScriptExtHtmlWebpackPlugin")
@@ -257,7 +225,6 @@ module.exports = {
           }
         ])
         .end();
-
       // 分割代码
       config.optimization.splitChunks({
         chunks: "all", //在做代码分割时，只对异步代码生效，写成all的话，同步异步代码都会分割
@@ -268,13 +235,6 @@ module.exports = {
         automaticNameDelimiter: "~", //文件生成时的连接符
         name: true, //让cacheGroups里设置的名字有效
         cacheGroups: {
-          // aws: {
-          //   name: 'aws',
-          //   test: /src\/utils\/aws.js/,
-          //   reuseExistingChunk: true,
-          //   enforce: true,
-          //   priority: 90
-          // },
           vue: {
             name: "vue-main",
             minChunks: 1,
@@ -283,18 +243,15 @@ module.exports = {
             enforce: true,
             priority: 100 //值越大,优先级越高.模块先打包到优先级高的组里
           },
-          echarts: {
-            name: "vue-echarts",
-            minChunks: 1,
-            test: /[\\/]node_modules[\\/]_?echarts(.*)/,
-            reuseExistingChunk: true,
-            enforce: true,
-            priority: 80
-          },
           antDesignVue: {
             name: "chunk-antDesignVue", // split antDesignVue into a single package
             priority: 70, // the weight needs to be larger than libs and app or it will be packaged into libs or app
             test: /[\\/]node_modules[\\/]_?ant-design-vue(.*)/ // in order to adapt to cnpm
+          },
+          whComponent: {
+            name: "chunk-whComponent", // split whComponent into a single package
+            priority: 70, // the weight needs to be larger than libs and app or it will be packaged into libs or app
+            test: /[\\/]node_modules[\\/]_?hx-antd-vue(.*)/ // in order to adapt to cnpm
           },
           libs: {
             name: "chunk-libs",
@@ -314,17 +271,17 @@ module.exports = {
       // 生产环境js增加版本号
       config.when(process.env.NODE_ENV, config => {
         config.output
-          .set("filename", posixJoin(`js/[name].${getDateTimes}.js`))
-          .set("chunkFilename", posixJoin(`js/[name].${getDateTimes}.js`));
+          .set("filename", posixJoin(`js/[name].${dataTimes}.js`))
+          .set("chunkFilename", posixJoin(`js/[name].${dataTimes}.js`));
       });
-      // https:// webpack.js.org/configuration/optimization/#optimizationruntimechunk
+      // 设定 runtime 代码单独抽取打包
       config.optimization.runtimeChunk("single");
     });
 
-    // 修改图片输出路径
+    // 修改图片输出路径;
     config.module
       .rule("images")
-      .test(/\.(png|jpe?g|gif|ico|ttf)(\?.*)?$/)
+      .test(/\.(png|jpe?g|gif|ico)(\?.*)?$/)
       .use("url-loader")
       .loader("url-loader")
       .options({
@@ -332,16 +289,7 @@ module.exports = {
         // 以下配置项用于配置file-loader,将图片打包到dist/img文件夹下, 不配置则打包到dist文件夹下
         outputPath: assetsPath,
         // 配置打包后图片文件名
-        name: `images/[name].${getDateTimes}.[ext]`
-      }).end()
-      const fontRule = config.module.rule('fonts');
-    fontRule.uses.clear();
-    fontRule
-      .use('file-loader')
-      .loader('file-loader')
-      .options({
-        name: 'fonts/[name].[hash:8].[ext]',
-        publicPath,
+        name: `images/[name].${dataTimes}.[ext]`
       })
       .end();
   }

@@ -1,0 +1,13 @@
+{
+  "pacCode": "PAC码",
+  "productName": "产品名称",
+  "versionNumber": "版本号",
+  "versionType": "版本类型",
+  "status": "状态",
+  "saleType": "销售模式",
+  "userName": "用户名称",
+  "projectName": "项目名称",
+  "contactPerson": "联系人",
+  "contractNo": "合同编号",
+  "operation": "操作"
+}

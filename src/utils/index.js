@@ -1,31 +1,21 @@
-/*
- * @Author: luohongxin
- * @Date: 2020-09-22 14:11:59
- * @Last Modified by: luohongxin
- * @Last Modified time: 2020-09-22 14:11:59
- */
-
-import * as filters from "../filters"; // global filters
-import Popup from "@/components/Popup";
-import loading from "@/components/Loading/index.js";
-import VueI18nPlugin from "./i18n-extend";
-import request from "./request";
-import "./local";
-
-export default {
-  install: Vue => {
-    // 绑定到vue实例的原型链上，这样可以在组件中直接调用this.$axios.get()，而不需要用import引入axios模块
-    Vue.prototype.$axios = request;
-    // 绑定到vue实例的原型链上
-    Vue.prototype.$popup = Popup.install;
-    // register global utility filters
-    Object.keys(filters).forEach(key => {
-      Vue.filter(key, filters[key]);
-    });
-    Vue.use(VueI18nPlugin);
-    Vue.use(loading); // 全局使用loading
-  }
+const getDateTimes = function() {
+  let data = new Date(new Date().toString());
+  let timezoneOffsetInHours = -(data.getTimezoneOffset() / 60); //UTC minus local time
+  let currDate = new Date(
+    data.getFullYear(),
+    data.getMonth(),
+    data.getDate(),
+    data.getHours(),
+    data.getMinutes(),
+    data.getSeconds()
+  );
+  currDate.setHours(data.getHours() + timezoneOffsetInHours);
+  let toISO = currDate.toISOString().match(/\d+/g);
+  let strDate = toISO.map(val => {
+    return val.length === 1 ? "0" + val : val;
+  });
+  return parseInt(strDate.join("")) / 1000;
 };
-
-// 全局使用loading 使用
-// this.$loading.show(),  this.$loading.hide()
+module.exports = {
+  getDateTimes
+};
